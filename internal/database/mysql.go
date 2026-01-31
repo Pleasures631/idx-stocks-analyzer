@@ -4,15 +4,23 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 )
 
 var DB *sqlx.DB
 
 func InitMySQL() {
+
+	err := godotenv.Load(filepath.Join("../../.env"))
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	dbUser := os.Getenv("DB_USER")
 	dbPass := os.Getenv("DB_PWD")
 	dbHost := os.Getenv("DB_HOST")
