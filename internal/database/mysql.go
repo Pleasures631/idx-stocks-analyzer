@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -12,11 +13,11 @@ import (
 var DB *sqlx.DB
 
 func InitMySQL() {
-	dbUser := "root"
-	dbPass := "Alz081897997!"
-	dbHost := "localhost"
-	dbPort := "3306"
-	dbName := "selca_stocks_idx"
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PWD")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbName := os.Getenv("DB_NAME")
 
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?parseTime=true&loc=Asia%%2FJakarta",
