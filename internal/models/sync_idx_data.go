@@ -20,6 +20,7 @@ type BrokerList struct {
 	ID            uint64    `db:"id" json:"id"`
 	BrokerCode    string    `db:"broker_code" json:"broker_code"`
 	BrokerName    string    `db:"broker_name" json:"broker_name"`
+	BrokerType    string    `db:"broker_type" json:"broker_type"`
 	BrokerLicense string    `db:"broker_license" json:"broker_license"`
 	CreatedAt     time.Time `db:"created_at" json:"created_at"`
 }

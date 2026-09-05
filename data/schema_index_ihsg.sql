@@ -1,0 +1,25 @@
+-- 000001_create_t_index_summary_ihsg.up.sql
+CREATE TABLE IF NOT EXISTS `t_index_summary_ihsg` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `symbol` VARCHAR(20) NOT NULL DEFAULT 'IHSG',
+  `trade_date` DATE NOT NULL,
+  `open_price` DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
+  `high_price` DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
+  `low_price` DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
+  `close_price` DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
+  `change_price` DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
+  `change_percentage` DECIMAL(10,4) NOT NULL DEFAULT 0.0000,
+  `volume` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `value` DECIMAL(20,2) NOT NULL DEFAULT 0.00,
+  `frequency` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `foreign_buy` DECIMAL(20,2) NOT NULL DEFAULT 0.00,
+  `foreign_sell` DECIMAL(20,2) NOT NULL DEFAULT 0.00,
+  `net_foreign` DECIMAL(20,2) NOT NULL DEFAULT 0.00,
+  `average` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_symbol_date` (`symbol`, `trade_date`),
+  KEY `idx_trade_date` (`trade_date`),
+  KEY `idx_symbol` (`symbol`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

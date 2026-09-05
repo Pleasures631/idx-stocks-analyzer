@@ -16,7 +16,13 @@ var DB *sqlx.DB
 
 func InitMySQL() {
 
-	err := godotenv.Load(filepath.Join("../../.env"))
+	err := godotenv.Load()
+	if err != nil {
+		err = godotenv.Load(filepath.Join("../../.env"))
+	}
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}

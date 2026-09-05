@@ -4,14 +4,16 @@ const (
 	/**
 	List Main Url
 	**/
-	IDXBaseURL = "https://www.idx.co.id/primary"
+	IDXBaseURL    = "https://www.idx.co.id/primary"
+	ExodusBaseURL = "https://exodus.stockbit.com"
 
 	/**
 	List Module Url
 	**/
-	ModuleTradingSummary = "TradingSummary"
-	ModuleExchangeMember = "ExchangeMember"
-	ModuleStockData      = "StockData"
+	ModuleTradingSummary       = "TradingSummary"
+	ModuleExchangeMember       = "ExchangeMember"
+	ModuleStockData            = "StockData"
+	ModuleExodusMarketDetector = "marketdetectors"
 
 	/**
 	List Service Url

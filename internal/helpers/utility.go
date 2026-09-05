@@ -2,6 +2,8 @@ package helpers
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 	"time"
 )
 
@@ -33,14 +35,37 @@ func GenerateDateRange(start, end string) ([]string, error) {
 }
 
 func FormatBigNumber(n float64) string {
-	if n >= 1e12 {
-		return fmt.Sprintf("%.2f T", n/1e12)
+	absN := math.Abs(n)
+
+	if absN >= 1e12 {
+		return fmt.Sprintf("%.2f T", n/1e12) // Trillion
 	}
-	if n >= 1e9 {
-		return fmt.Sprintf("%.2f M", n/1e9)
+	if absN >= 1e9 {
+		return fmt.Sprintf("%.2f B", n/1e9) // Billion (Miliar)
 	}
-	if n >= 1e6 {
-		return fmt.Sprintf("%.2f Jt", n/1e6)
+	if absN >= 1e6 {
+		return fmt.Sprintf("%.2f M", n/1e6) // Million (Juta)
 	}
 	return fmt.Sprintf("%.0f", n)
+}
+
+func RoundFloat(val float64, precision int) float64 {
+	if math.IsNaN(val) || math.IsInf(val, 0) {
+		return 0.0
+	}
+	ratio := math.Pow(10, float64(precision))
+	return math.Round(val*ratio) / ratio
+}
+
+func ParseFloat(s string) float64 {
+	if s == "" {
+		return 0
+	}
+
+	val, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0
+	}
+
+	return val
 }

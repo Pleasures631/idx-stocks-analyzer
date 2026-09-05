@@ -129,7 +129,6 @@ func RunBacktestEOD(c *gin.Context) {
 	// Ambil tanggal target dari query param, default ke 7 hari lalu jika kosong
 	targetDate := c.Query("date")
 	if targetDate == "" {
-		// Otomatis hitung tanggal 7 hari kalender ke belakang
 		targetDate = time.Now().AddDate(0, 0, -7).Format("2006-01-02")
 	}
 
@@ -139,35 +138,41 @@ func RunBacktestEOD(c *gin.Context) {
 		return
 	}
 
-	// --- LOGIC STATISTIK SEDERHANA ---
-	var totalWin, totalLose int
+	// --- LOGIC STATISTIK YANG AKURAT & KONSISTEN ---
+	var totalWin, totalLose, totalFlat int
 	var sumProfit float64
 
 	for _, res := range data {
-		if res.ProfitLossPct > 0 {
+		switch res.ResultStatus {
+		case "✅ WIN":
 			totalWin++
-		} else {
+		case "❌ LOSE":
 			totalLose++
+		default:
+			totalFlat++
 		}
 		sumProfit += res.ProfitLossPct
 	}
 
+	totalSignals := len(data)
 	winRate := 0.0
 	avgProfit := 0.0
-	if len(data) > 0 {
-		winRate = (float64(totalWin) / float64(len(data))) * 100
-		avgProfit = sumProfit / float64(len(data))
+
+	if totalSignals > 0 {
+		winRate = (float64(totalWin) / float64(totalSignals)) * 100
+		avgProfit = sumProfit / float64(totalSignals)
 	}
 
 	c.JSON(200, gin.H{
 		"mode":        "backtest_eod",
 		"target_date": targetDate,
 		"summary": gin.H{
-			"total_signals": len(data),
+			"total_signals": totalSignals,
 			"win_rate":      fmt.Sprintf("%.2f%%", winRate),
 			"avg_profit":    fmt.Sprintf("%.2f%%", avgProfit),
 			"win_count":     totalWin,
 			"lose_count":    totalLose,
+			"flat_count":    totalFlat,
 		},
 		"data": data,
 	})

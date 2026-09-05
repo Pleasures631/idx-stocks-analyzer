@@ -186,6 +186,7 @@ type BacktestResponse struct {
 	WinRate   float64          `json:"win_rate"`
 	TotalWin  int              `json:"total_win"`
 	TotalLose int              `json:"total_lose"`
+	TotalFlat int              `json:"total_flat"`
 	AvgProfit float64          `json:"avg_profit"`
 }
 
@@ -233,5 +234,5 @@ type StatisticSingleStock struct {
 
 type StatisticSingleStockMapped struct {
 	StockCode string                 `db:"code" json:"Stock Code"`
-	Details   []StatisticSingleStock `json:details`
+	Details   []StatisticSingleStock `json:"details"`
 }

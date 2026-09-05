@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -56,18 +57,28 @@ func FetchIDX[T any](
 		resp, err := client.Do(req)
 		if err != nil {
 			lastErr = err
+			LogInterfaceCall("FetchIDX", url, "", 0, err)
 			time.Sleep(retryDelay)
 			continue
 		}
 
-		defer resp.Body.Close()
+		bodyBytes, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			LogInterfaceCall("FetchIDX", url, "", resp.StatusCode, err)
+			lastErr = err
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		LogInterfaceCall("FetchIDX", url, string(bodyBytes), resp.StatusCode, nil)
 
 		if resp.StatusCode == http.StatusOK {
 			var result struct {
 				Data []T `json:"data"`
 			}
 
-			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			if err := json.Unmarshal(bodyBytes, &result); err != nil {
 				return nil, err
 			}
 
@@ -85,3 +96,12 @@ func FetchIDX[T any](
 
 	return nil, fmt.Errorf("retry failed after %d attempts: %v", maxRetry, lastErr)
 }
+
+// func FetchExodus[T any](
+// 	exodus_url string,
+// 	module string,
+// 	service string,
+// 	dates ...string,
+// ) ([]T, error) {
+// 	return true, nil
+// }

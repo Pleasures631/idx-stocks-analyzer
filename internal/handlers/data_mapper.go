@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"indonesia-stocks-api/internal/helpers"
 	"indonesia-stocks-api/internal/models"
 	"time"
 )
@@ -92,4 +93,62 @@ func MapIDXTradingSummaryToModel(s models.TradingSummary) models.TradingSummaryD
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
+}
+
+func MapExodusBrokerSummaryToModel(summary models.ExodusBrokerSummary) []models.ExodusBrokerSummaryDB {
+	rows := make([]models.ExodusBrokerSummaryDB, 0, len(summary.BrokersBuy)+len(summary.BrokersSell))
+
+	for _, b := range summary.BrokersBuy {
+		tradeDate := parseExodusDate(b.Date)
+
+		rows = append(rows, models.ExodusBrokerSummaryDB{
+			StockCode:   b.StockCode,
+			TradeDate:   tradeDate,
+			BrokerCode:  b.BrokerCode,
+			Side:        "BUY",
+			BrokerType:  b.Type,
+			Lot:         helpers.ParseFloat(b.Blot),
+			Volume:      helpers.ParseFloat(b.Blotv),
+			Value:       helpers.ParseFloat(b.Bval),
+			Turnover:    helpers.ParseFloat(b.Bvalv),
+			AvgPrice:    helpers.ParseFloat(b.BuyAvgPrice),
+			Frequency:   int64(helpers.ParseFloat(b.Freq)),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		})
+	}
+
+	for _, s := range summary.BrokersSell {
+		tradeDate := parseExodusDate(s.Date)
+		rows = append(rows, models.ExodusBrokerSummaryDB{
+			StockCode:   s.StockCode,
+			TradeDate:   tradeDate,
+			BrokerCode:  s.BrokerCode,
+			Side:        "SELL",
+			BrokerType:  s.Type,
+			Lot:         helpers.ParseFloat(s.Slot),
+			Volume:      helpers.ParseFloat(s.Slotv),
+			Value:       helpers.ParseFloat(s.Sval),
+			Turnover:    helpers.ParseFloat(s.Svalv),
+			AvgPrice:    helpers.ParseFloat(s.SellAvgPrice),
+			Frequency:   int64(helpers.ParseFloat(s.Freq)),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		})
+	}
+
+	return rows
+}
+
+func parseExodusDate(dateStr string) time.Time {
+	if dateStr == "" {
+		return time.Time{}
+	}
+
+	t, err := time.Parse("20060102", dateStr)
+	if err != nil {
+		return time.Time{}
+	}
+
+	return t
 }

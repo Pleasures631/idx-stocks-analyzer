@@ -1,0 +1,18 @@
+# Air hot-reload config for indonesia-stocks-api
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/server.exe ./cmd/api"
+  bin = "./tmp/server.exe"
+  include_ext = ["go", "html", "env"]
+  exclude_dir = ["tmp", "data", ".git"]
+  delay = 1000
+  stop_on_error = true
+  log = "air.log"
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = true
