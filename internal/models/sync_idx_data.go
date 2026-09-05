@@ -33,6 +33,7 @@ type StocksList struct {
 	TotalShares  uint64    `db:"total_shares" json:"total_shares"`
 	ListingBoard string    `db:"listing_board" json:"listing_board"`
 	IsActive     bool      `db:"is_active" json:"is_active"`
+	MarketMaker  string    `db:"market_maker" json:"market_maker"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 
 	// Data pasar terbaru (hasil join ke t_trading_summary, nullable bila belum ada)

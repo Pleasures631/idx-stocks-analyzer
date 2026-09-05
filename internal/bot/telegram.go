@@ -365,6 +365,16 @@ func (b *TelegramBot) handleFetchDaily(chatID int64) {
 		b.sendMessage(chatID, "✅ IDX Stocks synced", nil)
 	}
 
+	// 4b. Ambil broker insider KSEI melalui browser session Stockbit.
+	b.sendMessage(chatID, "🔄 Sync Stockbit Insider KSEI...", nil)
+	insiderResult, err := b.syncInsiderMarketMakers()
+	if err != nil {
+		log.Printf("[fetchDaily] Gagal sync Stockbit Insider: %v", err)
+		b.sendMessage(chatID, fmt.Sprintf("⚠️ Gagal sync Insider KSEI: %s", err.Error()), nil)
+	} else {
+		b.sendMessage(chatID, fmt.Sprintf("✅ Insider KSEI: %d mapping baru", insiderResult.NewMappings), nil)
+	}
+
 	b.sendMessage(chatID, "🔄 Sync IDX Brokers...", nil)
 	if err := b.syncIDXBrokers(); err != nil {
 		log.Printf("[fetchDaily] Gagal sync IDX brokers: %v", err)
@@ -414,6 +424,24 @@ func (b *TelegramBot) syncIDXStocks() error {
 	}
 
 	return repositories.UpsertStocks(stocks)
+}
+
+type InsiderSyncResult struct {
+	Pages       int
+	Records     int
+	NewMappings int
+}
+
+func (b *TelegramBot) syncInsiderMarketMakers() (*InsiderSyncResult, error) {
+	records, pages, err := services.CrawlKSEIInsiderWithTimeout()
+	if err != nil {
+		return nil, err
+	}
+	newMappings, err := repositories.UpsertInsiderMarketMakers(records)
+	if err != nil {
+		return nil, err
+	}
+	return &InsiderSyncResult{Pages: pages, Records: len(records), NewMappings: newMappings}, nil
 }
 
 // syncIDXBrokers melakukan sync data broker dari IDX
