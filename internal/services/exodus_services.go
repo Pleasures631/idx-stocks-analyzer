@@ -1,12 +1,15 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,8 +27,9 @@ const (
 )
 
 var (
-	exodusMu       sync.Mutex
-	lastExodusCall time.Time
+	exodusMu        sync.Mutex
+	lastExodusCall  time.Time
+	exodusRefreshMu sync.Mutex
 )
 
 var exodusHTTPClient = &http.Client{
@@ -79,10 +83,49 @@ func isExodusBusy(status int, body []byte) bool {
 	return false
 }
 
+func normalizeExodusToken(token string) string {
+	token = strings.TrimSpace(token)
+	if strings.HasPrefix(strings.ToLower(token), "bearer ") {
+		return strings.TrimSpace(token[len("Bearer "):])
+	}
+	return token
+}
+
+// refreshExodusToken asks the existing Playwright session to refresh the
+// browser-issued token. The mutex prevents concurrent fetch workers from
+// opening multiple refresh browsers after the same 401 response.
+func refreshExodusToken(ctx context.Context, staleToken string) error {
+	exodusRefreshMu.Lock()
+	defer exodusRefreshMu.Unlock()
+
+	if current := normalizeExodusToken(os.Getenv("EXODUS_TOKEN")); current != "" && current != staleToken {
+		return nil
+	}
+
+	script := strings.TrimSpace(os.Getenv("EXODUS_TOKEN_REFRESH_SCRIPT"))
+	if script == "" {
+		return fmt.Errorf("EXODUS_TOKEN_REFRESH_SCRIPT not configured")
+	}
+
+	refreshCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	output, err := exec.CommandContext(refreshCtx, "node", script).Output()
+	if err != nil {
+		return fmt.Errorf("refresh Exodus token: %w", err)
+	}
+
+	newToken := normalizeExodusToken(string(output))
+	if newToken == "" {
+		return fmt.Errorf("refresh Exodus token returned an empty token")
+	}
+	os.Setenv("EXODUS_TOKEN", newToken)
+	return nil
+}
+
 func FetchExodusMarketDetector(symbol, from, to string) (models.ExodusMarketDetector, error) {
 	var result models.ExodusMarketDetector
 
-	token := os.Getenv("EXODUS_TOKEN")
+	token := normalizeExodusToken(os.Getenv("EXODUS_TOKEN"))
 	if token == "" {
 		return result, fmt.Errorf("EXODUS_TOKEN not set in .env")
 	}
@@ -97,6 +140,7 @@ func FetchExodusMarketDetector(symbol, from, to string) (models.ExodusMarketDete
 	)
 
 	var lastErr error
+	refreshAttempted := false
 
 	for attempt := 1; attempt <= exodusMaxRetry; attempt++ {
 		req, err := http.NewRequest("GET", url, nil)
@@ -153,8 +197,14 @@ func FetchExodusMarketDetector(symbol, from, to string) (models.ExodusMarketDete
 			return payload.Data, nil
 		}
 
-		if resp.StatusCode == http.StatusUnauthorized {
-			return result, fmt.Errorf("exodus unauthorized: invalid/expired EXODUS_TOKEN")
+		if resp.StatusCode == http.StatusUnauthorized && !refreshAttempted {
+			refreshAttempted = true
+			refreshErr := refreshExodusToken(context.Background(), token)
+			if refreshErr == nil {
+				token = normalizeExodusToken(os.Getenv("EXODUS_TOKEN"))
+				continue
+			}
+			return result, fmt.Errorf("exodus unauthorized: invalid/expired EXODUS_TOKEN: %v", refreshErr)
 		}
 
 		if resp.StatusCode >= 500 && resp.StatusCode <= 599 {
