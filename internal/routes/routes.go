@@ -2,11 +2,39 @@ package routes
 
 import (
 	"indonesia-stocks-api/internal/handlers"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
+// CORS middleware membolehkan request dari origin browser lain (mis. frontend
+// Next.js di localhost:3000) dan menangani preflight OPTIONS.
+func CORS() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if origin == "" {
+			c.Next()
+			return
+		}
+
+		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept, X-Requested-With")
+		c.Header("Vary", "Origin")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func RegisterRoutes(r *gin.Engine) {
+	r.Use(CORS())
+
 	r.GET("/health", handlers.HealthCheck)
 	r.GET("/stocks/list", handlers.GetStocksList)
 	r.GET("/brokers/list", handlers.GetBrokersList)
@@ -23,6 +51,8 @@ func RegisterRoutes(r *gin.Engine) {
 	r.GET("/analyze/top-scalping-daily", handlers.GetTopScalping)
 	r.GET("/exodus/broker-summary", handlers.GetExodusBrokerSummary)
 	r.GET("/exodus/broker-summary/analyze-flow", handlers.AnalyzeExodusBrokerFlow)
+	r.GET("/stocks/:symbol", handlers.GetTickerDetail)
+	r.GET("/stocks/:symbol/analyze", handlers.GetAnalyzeBySymbol)
 	r.POST("/exodus/broker-summary/fetch", handlers.FetchExodusBrokerSummary)
 	r.POST("/exodus/broker-summary/bulkfetch", handlers.FetchExodusBrokerSummaryAll)
 	r.POST("/api/v1/backtest/run", handlers.RunBacktestV1)

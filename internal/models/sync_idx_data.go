@@ -34,4 +34,11 @@ type StocksList struct {
 	ListingBoard string    `db:"listing_board" json:"listing_board"`
 	IsActive     bool      `db:"is_active" json:"is_active"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+
+	// Data pasar terbaru (hasil join ke t_trading_summary, nullable bila belum ada)
+	LastTradeDate *string  `db:"last_trade_date" json:"last_trade_date"`
+	LastPrice     *float64 `db:"last_price" json:"last_price"`
+	ChangePrice   *float64 `db:"change_price" json:"change_price"`
+	ChangePct     *float64 `db:"change_pct" json:"change_pct"`
+	Volume        *int64   `db:"volume" json:"volume"`
 }

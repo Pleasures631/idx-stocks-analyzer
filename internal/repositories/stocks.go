@@ -829,17 +829,29 @@ func GetAllStocks() ([]models.StocksList, error) {
 	var list []models.StocksList
 	query := `
 		SELECT
-			id,
-			stock_code,
-			stock_name,
-			listing_date,
-			total_shares,
-			listing_board,
-			is_active,
-			created_at
-		FROM m_list_stocks
-		WHERE is_active = 1
-		ORDER BY stock_code ASC
+			s.id,
+			s.stock_code,
+			s.stock_name,
+			s.listing_date,
+			s.total_shares,
+			s.listing_board,
+			s.is_active,
+			s.created_at,
+			DATE_FORMAT(t.trade_date, '%Y-%m-%d') AS last_trade_date,
+			t.close_price   AS last_price,
+			t.change_price  AS change_price,
+			(t.change_price / NULLIF(t.previous_price, 0)) * 100 AS change_pct,
+			t.volume        AS volume
+		FROM m_list_stocks s
+		LEFT JOIN t_trading_summary t
+			ON t.stock_code = s.stock_code
+			AND t.trade_date = (
+				SELECT MAX(t2.trade_date)
+				FROM t_trading_summary t2
+				WHERE t2.stock_code = s.stock_code
+			)
+		WHERE s.is_active = 1
+		ORDER BY s.stock_code ASC
 	`
 	err := database.DB.Select(&list, query)
 	return list, err

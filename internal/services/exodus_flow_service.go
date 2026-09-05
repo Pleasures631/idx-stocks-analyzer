@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"indonesia-stocks-api/internal/helpers"
@@ -158,6 +159,18 @@ func AnalyzeExodusBrokerFlowService(symbol, fromStr, toStr string) (*models.Exod
 // determinePhaseEnhanced uses broker group breakdown + metrics to detect
 // DISTRIBUTION MASIF ke retail (retail FOMO) vs genuine ACCUMULATION.
 func determinePhaseEnhanced(p models.ExodusFlowPhase) string {
+	// Pergerakan harga signifikan didahulukan: NAV besar (mis. markup/rebound)
+	// sering disertai net flow yang hampir balance antar broker, jadi tidak boleh
+	// langsung dikategorikan SIDEWAYS hanya karena ratio net kecil.
+	if p.PriceChangePct >= 5 {
+		return fmt.Sprintf("MARK-UP / REBOUND (Harga %+.1f%% selama %d hari)",
+			p.PriceChangePct, p.TotalDays)
+	}
+	if p.PriceChangePct <= -5 {
+		return fmt.Sprintf("MARK-DOWN / KOREKSI (Harga %+.1f%% selama %d hari)",
+			p.PriceChangePct, p.TotalDays)
+	}
+
 	// Net flow sangat kecil relatif terhadap total turnover -> harga moving
 	// sideways, bukan distribusi/akumulasi masif. Ini prioritas pertama supaya
 	// buy & sell yang hampir seimbang tidak salah dikategorikan.
@@ -518,4 +531,82 @@ func medianOf(sorted []float64) float64 {
 		return sorted[mid]
 	}
 	return (sorted[mid-1] + sorted[mid]) / 2
+}
+
+// GetStockDetail merangkum data detail sebuah saham untuk halaman ticker:
+// chart harga, volume per broker, dan summary buy/sell per broker per hari.
+// rangeStr (1m|3m|1y) menentukan rentang waktu; dari/to eksplisit mengalahkan
+// range jika keduanya diisi.
+func GetStockDetail(symbol, fromStr, toStr, rangeStr string) (*models.TickerDetail, error) {
+	if symbol == "" {
+		return nil, fmt.Errorf("symbol is required")
+	}
+
+	now := time.Now()
+
+	rangeDays := 0
+	rangeStr = strings.ToLower(strings.TrimSpace(rangeStr))
+	switch rangeStr {
+	case "1m":
+		rangeDays = 30
+	case "3m":
+		rangeDays = 90
+	case "1y":
+		rangeDays = 365
+	case "":
+	default:
+		return nil, fmt.Errorf("invalid range, use 1m|3m|1y")
+	}
+
+	if rangeDays > 0 {
+		fromStr = now.AddDate(0, 0, -rangeDays).Format("2006-01-02")
+		toStr = now.Format("2006-01-02")
+	}
+	if strings.TrimSpace(fromStr) == "" {
+		fromStr = now.AddDate(0, 0, -29).Format("2006-01-02")
+	}
+	if strings.TrimSpace(toStr) == "" {
+		toStr = now.Format("2006-01-02")
+	}
+
+	startDate, err := time.Parse("2006-01-02", fromStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid from date, format: YYYY-MM-DD")
+	}
+	endDate, err := time.Parse("2006-01-02", toStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid to date, format: YYYY-MM-DD")
+	}
+	if startDate.After(endDate) {
+		return nil, fmt.Errorf("from cannot be after to")
+	}
+
+	from := startDate.Format("2006-01-02")
+	to := endDate.Format("2006-01-02")
+
+	chart, err := repositories.GetTickerPriceBars(symbol, from, to)
+	if err != nil {
+		return nil, err
+	}
+	byBroker, err := repositories.GetTickerBrokerVolume(symbol, from, to)
+	if err != nil {
+		return nil, err
+	}
+	brokerDaily, err := repositories.GetTickerBrokerSummary(symbol, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	stockName, _ := repositories.GetStockName(symbol)
+
+	return &models.TickerDetail{
+		Symbol:      symbol,
+		StockName:   stockName,
+		Range:       rangeStr,
+		From:        from,
+		To:          to,
+		PriceChart:  chart,
+		ByBroker:    byBroker,
+		BrokerDaily: brokerDaily,
+	}, nil
 }

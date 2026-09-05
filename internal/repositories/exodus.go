@@ -405,3 +405,97 @@ func GetPriceWindow(symbol, from, to string) ([]PriceWindow, error) {
 	err := database.DB.Select(&rows, query, symbol, from, to)
 	return rows, err
 }
+
+type StockNameRow struct {
+	StockName string `db:"stock_name"`
+}
+
+func GetStockName(stockCode string) (string, error) {
+	var row StockNameRow
+	err := database.DB.Get(&row, `SELECT stock_name FROM m_list_stocks WHERE stock_code = ?`, stockCode)
+	if err != nil {
+		return "", err
+	}
+	return row.StockName, nil
+}
+
+// GetTickerPriceBars mengambil OHLCV + change_pct harian untuk chart.
+func GetTickerPriceBars(symbol, from, to string) ([]models.TickerPriceBar, error) {
+	query := `
+	SELECT
+		DATE_FORMAT(trade_date, '%Y-%m-%d') AS trade_date,
+		open_price,
+		high_price,
+		low_price,
+		close_price,
+		volume,
+		(close_price / NULLIF(previous_price, 0) - 1) * 100 AS change_pct
+	FROM t_trading_summary
+	WHERE stock_code = ?
+	  AND trade_date >= ?
+	  AND trade_date <= ?
+	ORDER BY trade_date
+	`
+	rows := []models.TickerPriceBar{}
+	err := database.DB.Select(&rows, query, symbol, from, to)
+	return rows, err
+}
+
+// GetTickerBrokerVolume mengambil agregat trading per broker dalam rentang.
+func GetTickerBrokerVolume(symbol, from, to string) ([]models.TickerBrokerVolume, error) {
+	query := `
+	SELECT
+		s.broker_code,
+		COALESCE(b.broker_name, s.broker_code) AS broker_name,
+		MAX(s.broker_type) AS broker_type,
+		SUM(IF(s.side = 'BUY',  s.lot, 0))  AS buy_lot,
+		SUM(IF(s.side = 'SELL', s.lot, 0))  AS sell_lot,
+		SUM(IF(s.side = 'BUY',  s.volume, 0)) AS buy_volume,
+		SUM(IF(s.side = 'SELL', s.volume, 0)) AS sell_volume,
+		SUM(IF(s.side = 'BUY',  ABS(s.value), 0)) AS buy_value,
+		SUM(IF(s.side = 'SELL', ABS(s.value), 0)) AS sell_value,
+		SUM(IF(s.side = 'BUY',  ABS(s.value), 0)) - SUM(IF(s.side = 'SELL', ABS(s.value), 0)) AS net_value,
+		COUNT(DISTINCT s.trade_date) AS active_days
+	FROM t_exodus_broker_summary s
+	LEFT JOIN m_list_broker b
+		ON s.broker_code = b.broker_code COLLATE utf8mb4_unicode_ci
+	WHERE s.stock_code = ?
+	  AND s.trade_date >= ?
+	  AND s.trade_date <= ?
+	GROUP BY s.broker_code, COALESCE(b.broker_name, s.broker_code)
+	ORDER BY net_value DESC
+	`
+	rows := []models.TickerBrokerVolume{}
+	err := database.DB.Select(&rows, query, symbol, from, to)
+	return rows, err
+}
+
+// GetTickerBrokerSummary mengambil buy/sell per broker per hari.
+func GetTickerBrokerSummary(symbol, from, to string) ([]models.TickerBrokerSummary, error) {
+	query := `
+	SELECT
+		DATE_FORMAT(s.trade_date, '%Y-%m-%d') AS trade_date,
+		s.broker_code,
+		COALESCE(b.broker_name, s.broker_code) AS broker_name,
+		MAX(s.broker_type) AS broker_type,
+		SUM(IF(s.side = 'BUY',  s.lot, 0))  AS buy_lot,
+		SUM(IF(s.side = 'SELL', s.lot, 0))  AS sell_lot,
+		SUM(IF(s.side = 'BUY',  s.volume, 0)) AS buy_volume,
+		SUM(IF(s.side = 'SELL', s.volume, 0)) AS sell_volume,
+		SUM(IF(s.side = 'BUY',  ABS(s.value), 0)) AS buy_value,
+		SUM(IF(s.side = 'SELL', ABS(s.value), 0)) AS sell_value,
+		SUM(IF(s.side = 'BUY',  ABS(s.value), 0)) - SUM(IF(s.side = 'SELL', ABS(s.value), 0)) AS net_value,
+		SUM(s.frequency) AS frequency
+	FROM t_exodus_broker_summary s
+	LEFT JOIN m_list_broker b
+		ON s.broker_code = b.broker_code COLLATE utf8mb4_unicode_ci
+	WHERE s.stock_code = ?
+	  AND s.trade_date >= ?
+	  AND s.trade_date <= ?
+	GROUP BY DATE_FORMAT(s.trade_date, '%Y-%m-%d'), s.broker_code, COALESCE(b.broker_name, s.broker_code)
+	ORDER BY trade_date, net_value DESC
+	`
+	rows := []models.TickerBrokerSummary{}
+	err := database.DB.Select(&rows, query, symbol, from, to)
+	return rows, err
+}

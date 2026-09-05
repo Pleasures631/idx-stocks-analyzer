@@ -268,6 +268,8 @@ func GetExodusBrokerSummary(c *gin.Context) {
 	})
 }
 
+// AnalyzeExodusBrokerFlow menganalisis broker flow sebuah saham (sama dengan
+// perintah /analyze di Telegram) untuk dikonsumsi frontend.
 func AnalyzeExodusBrokerFlow(c *gin.Context) {
 	symbol := c.Query("symbol")
 	if symbol == "" {
@@ -284,5 +286,57 @@ func AnalyzeExodusBrokerFlow(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+	})
+}
+
+// GetAnalyzeBySymbol menganalisis broker flow sebuah saham dari path param
+// `/stocks/:symbol/analyze`, konsisten dengan `/stocks/:symbol`.
+func GetAnalyzeBySymbol(c *gin.Context) {
+	symbol := c.Param("symbol")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "symbol is required"})
+		return
+	}
+
+	from := c.Query("from")
+	to := c.Query("to")
+
+	result, err := services.AnalyzeExodusBrokerFlowService(symbol, from, to)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+	})
+}
+
+// GetTickerDetail mengembalikan data detail saham (chart harga, volume per
+// broker, dan summary buy/sell per broker) untuk halaman ticker frontend.
+func GetTickerDetail(c *gin.Context) {
+	symbol := c.Param("symbol")
+	if symbol == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "symbol is required"})
+		return
+	}
+
+	from := c.Query("from")
+	to := c.Query("to")
+	rangeStr := c.Query("range")
+
+	result, err := services.GetStockDetail(symbol, from, to, rangeStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+	})
 }
