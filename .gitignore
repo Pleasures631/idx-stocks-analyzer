@@ -1,1 +1,22 @@
+## Environment
 .env
+
+## Build artifacts
+*.exe
+server.exe
+tmp/
+
+## Logs
+air_run.log
+server.log
+*.log
+
+## Generated / tooling
+repomix-output.xml
+SUMMARY.md
+skills-lock.json
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
