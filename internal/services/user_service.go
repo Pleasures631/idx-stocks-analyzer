@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"net/mail"
 	"regexp"
 	"strings"
@@ -35,7 +36,17 @@ func NormalizeAndValidateUser(input models.RegisterUserRequest) (models.Register
 	if len([]rune(input.Address)) < 5 || len([]rune(input.Address)) > 500 {
 		errors["address"] = "address must contain 5-500 characters"
 	}
+	if len(input.Password) < 8 || len(input.Password) > 72 {
+		errors["password"] = "password must contain 8-72 characters"
+	}
 	return input, errors
+}
+
+func ValidatePassword(password string) error {
+	if len(password) < 8 || len(password) > 72 {
+		return fmt.Errorf("password must contain 8-72 characters")
+	}
+	return nil
 }
 
 func normalizeIndonesianPhone(phone string) string {

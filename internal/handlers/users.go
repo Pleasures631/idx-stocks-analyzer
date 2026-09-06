@@ -27,6 +27,12 @@ func RegisterUser(c *gin.Context) {
 		})
 		return
 	}
+	passwordHash, err := services.HashPassword(normalized.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "failed to secure password"})
+		return
+	}
+	normalized.Password = string(passwordHash)
 
 	user, err := repositories.CreateUser(normalized)
 	if err != nil {

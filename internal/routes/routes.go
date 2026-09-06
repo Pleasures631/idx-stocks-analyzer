@@ -37,6 +37,10 @@ func RegisterRoutes(r *gin.Engine) {
 
 	r.GET("/health", handlers.HealthCheck)
 	r.POST("/users/register", handlers.RegisterUser)
+	r.POST("/auth/login", handlers.Login)
+	r.POST("/auth/refresh", handlers.RefreshToken)
+	r.POST("/auth/forgot-password", handlers.ForgotPassword)
+	r.POST("/auth/reset-password", handlers.ResetPassword)
 	r.GET("/education/articles", handlers.GetEducationArticles)
 	r.GET("/education/articles/:slug", handlers.GetEducationArticle)
 	r.GET("/stocks/list", handlers.GetStocksList)
