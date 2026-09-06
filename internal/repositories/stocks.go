@@ -836,7 +836,7 @@ func GetAllStocks() ([]models.StocksList, error) {
 			s.total_shares,
 			s.listing_board,
 			s.is_active,
-			s.market_maker,
+			COALESCE(s.market_maker, '') AS market_maker,
 			s.created_at,
 			DATE_FORMAT(t.trade_date, '%Y-%m-%d') AS last_trade_date,
 			t.close_price   AS last_price,

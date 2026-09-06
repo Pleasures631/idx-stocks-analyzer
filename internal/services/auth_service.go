@@ -118,8 +118,8 @@ func ResetPassword(token, password string) (*models.User, error) {
 }
 
 func SendRegistrationOTP(email, name, otp string) error {
-	content := fmt.Sprintf("<h1 style=\"margin:0 0 16px;color:#111827;font-size:24px\">Verify your email</h1><p style=\"color:#4b5563\">Enter this code to complete your StockDash registration:</p><div style=\"margin:24px 0;padding:16px;text-align:center;background:#eef2ff;border-radius:12px;color:#4338ca;font-size:32px;font-weight:700;letter-spacing:8px\">%s</div><p style=\"color:#6b7280;font-size:13px\">This code expires in 10 minutes.</p>", html.EscapeString(otp))
-	return sendBrevoEmail(email, name, "Verify your StockDash account", content)
+	content := fmt.Sprintf("<h1 style=\"margin:0 0 16px;color:#111827;font-size:24px\">Verify your email</h1><p style=\"color:#4b5563\">Enter this code to complete your Yapping Saham registration:</p><div style=\"margin:24px 0;padding:16px;text-align:center;background:#eef2ff;border-radius:12px;color:#4338ca;font-size:32px;font-weight:700;letter-spacing:8px\">%s</div><p style=\"color:#6b7280;font-size:13px\">This code expires in 10 minutes.</p>", html.EscapeString(otp))
+	return sendBrevoEmail(email, name, "Verify your Yapping Saham account", content)
 }
 
 func randomToken(size int) (string, error) {
@@ -141,7 +141,7 @@ func sendResetEmail(email, name, token string) error {
 		baseURL = "http://localhost:3000"
 	}
 	content := fmt.Sprintf("<h1 style=\"margin:0 0 16px;color:#111827;font-size:24px\">Reset your password</h1><p style=\"color:#4b5563\">Hi %s, use the button below to choose a new password.</p><p style=\"margin:24px 0\"><a href=\"%s/reset-password?token=%s\" style=\"display:inline-block;padding:12px 18px;border-radius:10px;background:#4f46e5;color:#fff;text-decoration:none;font-weight:600\">Reset password</a></p><p style=\"color:#6b7280;font-size:13px\">This link expires in 30 minutes. If you did not request it, you can ignore this email.</p>", html.EscapeString(name), html.EscapeString(baseURL), html.EscapeString(token))
-	return sendBrevoEmail(email, name, "Reset your StockDash password", content)
+	return sendBrevoEmail(email, name, "Reset your Yapping Saham password", content)
 }
 
 func sendBrevoEmail(email, name, subject, content string) error {
@@ -151,14 +151,15 @@ func sendBrevoEmail(email, name, subject, content string) error {
 		return errors.New("Brevo email configuration is missing")
 	}
 	logoURL := strings.TrimRight(os.Getenv("BRAND_LOGO_URL"), "/")
-	if logoURL == "" {
-		logoURL = strings.TrimRight(os.Getenv("FRONTEND_BASE_URL"), "/") + "/img/yapping-saham-logo/logo.png"
+	logoMarkup := `<div style="color:#0f172a;font-size:22px;font-weight:700;letter-spacing:-.5px;margin:0 0 28px">Yapping Saham</div>`
+	if strings.HasPrefix(logoURL, "https://") {
+		logoMarkup = fmt.Sprintf(`<img src="%s" alt="Yapping Saham" width="240" style="display:block;width:240px;max-width:100%%;height:auto;margin:0 0 28px"><div style="color:#0f172a;font-size:22px;font-weight:700;letter-spacing:-.5px;margin:-18px 0 28px">Yapping Saham</div>`, html.EscapeString(logoURL))
 	}
 	payload := map[string]any{
 		"sender":      map[string]string{"name": os.Getenv("BREVO_SENDER_NAME"), "email": senderEmail},
 		"to":          []map[string]string{{"email": email, "name": name}},
 		"subject":     subject,
-		"htmlContent": fmt.Sprintf("<div style=\"background:#f3f4f6;padding:32px 16px;font-family:Arial,sans-serif\"><div style=\"max-width:520px;margin:auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 18px rgba(15,23,42,.08)\"><img src=\"%s\" alt=\"Yapping Saham\" width=240 style=\"display:block;width:240px;max-width:100%%;height:auto;margin:0 0 28px\"><div>%s</div></div></div>", html.EscapeString(logoURL), content),
+		"htmlContent": fmt.Sprintf("<div style=\"background:#f3f4f6;padding:32px 16px;font-family:Arial,sans-serif\"><div style=\"max-width:520px;margin:auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 18px rgba(15,23,42,.08)\">%s<div>%s</div></div></div>", logoMarkup, content),
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -174,7 +175,7 @@ func sendBrevoEmail(email, name, subject, content string) error {
 	req.Header.Set("api-key", apiKey)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		LogInterfaceCall("SendPasswordResetEmail", req.URL.String(), "", 0, err)
+		LogInterfaceCall("SendBrevoEmail", req.URL.String(), "", 0, err)
 		return err
 	}
 	defer resp.Body.Close()
