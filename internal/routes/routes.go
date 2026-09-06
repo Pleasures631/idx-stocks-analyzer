@@ -46,8 +46,6 @@ func RegisterRoutes(r *gin.Engine) {
 	r.GET("/education/articles/:slug", handlers.GetEducationArticle)
 	r.GET("/stocks/list", handlers.GetStocksList)
 	r.GET("/market/ihsg", handlers.GetStockbitIHSG)
-	r.GET("/market/ihsg/foreign-domestic", handlers.GetStockbitForeignDomestic)
-	r.POST("/market/ihsg/foreign-domestic/sync", handlers.SyncStockbitForeignDomestic)
 	r.GET("/market/ihsg/chart", handlers.GetStockbitIHSGChart)
 	r.POST("/market/ihsg/chart/sync", handlers.SyncStockbitIHSGChart)
 	r.GET("/brokers/list", handlers.GetBrokersList)

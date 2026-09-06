@@ -404,13 +404,6 @@ func (b *TelegramBot) handleFetchDaily(chatID int64) {
 	}
 
 	// 7. Update last sync date ke database
-	b.sendMessage(chatID, "🔄 Sync IHSG Foreign/Domestic...", nil)
-	if _, err := services.SyncStockbitForeignDomestic(context.Background(), "IHSG"); err != nil {
-		log.Printf("[fetchDaily] Gagal sync IHSG foreign/domestic: %v", err)
-		b.sendMessage(chatID, fmt.Sprintf("⚠️ Gagal sync IHSG Foreign/Domestic: %s", err.Error()), nil)
-	} else {
-		b.sendMessage(chatID, "✅ IHSG Foreign/Domestic synced", nil)
-	}
 	b.sendMessage(chatID, fmt.Sprintf("🔄 Sync IHSG Price Chart (%s s/d %s)...", startDateStr, endDateStr), nil)
 	if chartPoints, err := services.SyncStockbitIHSGChart(context.Background(), "IHSG", startDateStr, endDateStr); err != nil {
 		log.Printf("[fetchDaily] Gagal sync IHSG chart: %v", err)

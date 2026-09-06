@@ -18,43 +18,6 @@ func GetStockbitIHSG(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": quote})
 }
 
-func GetStockbitForeignDomestic(c *gin.Context) {
-	symbol := c.DefaultQuery("symbol", "IHSG")
-	from, to := c.Query("from"), c.Query("to")
-	if from != "" {
-		if _, err := time.Parse("2006-01-02", from); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "from must use YYYY-MM-DD"})
-			return
-		}
-	}
-	if to != "" {
-		if _, err := time.Parse("2006-01-02", to); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "to must use YYYY-MM-DD"})
-			return
-		}
-	}
-	if from != "" && to != "" && from > to {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "from cannot be after to"})
-		return
-	}
-	rows, err := repositories.GetStockbitForeignDomestic(symbol, from, to)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "symbol": symbol, "total": len(rows), "data": rows})
-}
-
-func SyncStockbitForeignDomestic(c *gin.Context) {
-	symbol := c.DefaultQuery("symbol", "IHSG")
-	row, err := services.SyncStockbitForeignDomestic(c.Request.Context(), symbol)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "data": row})
-}
-
 func GetStockbitIHSGChart(c *gin.Context) {
 	symbol := c.DefaultQuery("symbol", "IHSG")
 	from, to := c.Query("from"), c.Query("to")
