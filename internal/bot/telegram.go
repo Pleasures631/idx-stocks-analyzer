@@ -411,6 +411,13 @@ func (b *TelegramBot) handleFetchDaily(chatID int64) {
 	} else {
 		b.sendMessage(chatID, "✅ IHSG Foreign/Domestic synced", nil)
 	}
+	b.sendMessage(chatID, fmt.Sprintf("🔄 Sync IHSG Price Chart (%s s/d %s)...", startDateStr, endDateStr), nil)
+	if chartPoints, err := services.SyncStockbitIHSGChart(context.Background(), "IHSG", startDateStr, endDateStr); err != nil {
+		log.Printf("[fetchDaily] Gagal sync IHSG chart: %v", err)
+		b.sendMessage(chatID, fmt.Sprintf("⚠️ Gagal sync IHSG Price Chart: %s", err.Error()), nil)
+	} else {
+		b.sendMessage(chatID, fmt.Sprintf("✅ IHSG Price Chart synced: %d titik", chartPoints), nil)
+	}
 
 	// 8. Update last sync date ke database
 	if err := repositories.UpdateLastSyncDate("daily_sync", today); err != nil {
