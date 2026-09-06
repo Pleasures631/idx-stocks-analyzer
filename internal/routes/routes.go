@@ -36,6 +36,7 @@ func RegisterRoutes(r *gin.Engine) {
 	r.Use(CORS())
 
 	r.GET("/health", handlers.HealthCheck)
+	r.POST("/users/register", handlers.RegisterUser)
 	r.GET("/stocks/list", handlers.GetStocksList)
 	r.GET("/brokers/list", handlers.GetBrokersList)
 	r.GET("/idx/brokersummary", handlers.FetchBrokerSummary)
