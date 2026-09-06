@@ -150,11 +150,15 @@ func sendBrevoEmail(email, name, subject, content string) error {
 	if apiKey == "" || senderEmail == "" {
 		return errors.New("Brevo email configuration is missing")
 	}
+	logoURL := strings.TrimRight(os.Getenv("BRAND_LOGO_URL"), "/")
+	if logoURL == "" {
+		logoURL = strings.TrimRight(os.Getenv("FRONTEND_BASE_URL"), "/") + "/img/yapping-saham-logo/logo.png"
+	}
 	payload := map[string]any{
 		"sender":      map[string]string{"name": os.Getenv("BREVO_SENDER_NAME"), "email": senderEmail},
 		"to":          []map[string]string{{"email": email, "name": name}},
 		"subject":     subject,
-		"htmlContent": fmt.Sprintf("<div style=\"background:#f3f4f6;padding:32px 16px;font-family:Arial,sans-serif\"><div style=\"max-width:520px;margin:auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 18px rgba(15,23,42,.08)\"><div style=\"color:#4f46e5;font-size:18px;font-weight:700;margin-bottom:24px\">StockDash</div>%s</div></div>", content),
+		"htmlContent": fmt.Sprintf("<div style=\"background:#f3f4f6;padding:32px 16px;font-family:Arial,sans-serif\"><div style=\"max-width:520px;margin:auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 18px rgba(15,23,42,.08)\"><img src=\"%s\" alt=\"Yapping Saham\" width=240 style=\"display:block;width:240px;max-width:100%%;height:auto;margin:0 0 28px\"><div>%s</div></div></div>", html.EscapeString(logoURL), content),
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
