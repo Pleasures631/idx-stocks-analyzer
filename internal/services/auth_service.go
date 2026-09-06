@@ -14,6 +14,7 @@ import (
 	"html"
 	"math/big"
 	"net/http"
+	"net/smtp"
 	"os"
 	"strings"
 	"time"
@@ -145,6 +146,9 @@ func sendResetEmail(email, name, token string) error {
 }
 
 func sendBrevoEmail(email, name, subject, content string) error {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("EMAIL_PROVIDER")), "mailpit") {
+		return sendMailpitEmail(email, subject, content)
+	}
 	apiKey := os.Getenv("BREVO_API_KEY")
 	senderEmail := os.Getenv("BREVO_SENDER_EMAIL")
 	if apiKey == "" || senderEmail == "" {
@@ -185,5 +189,37 @@ func sendBrevoEmail(email, name, subject, content string) error {
 		err = fmt.Errorf("Brevo returned HTTP %d", resp.StatusCode)
 	}
 	LogInterfaceCall("SendBrevoEmail", req.URL.String(), responseBody.String(), resp.StatusCode, err)
+	return err
+}
+
+func sendMailpitEmail(recipient, subject, content string) error {
+	host := os.Getenv("MAILPIT_SMTP_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	port := os.Getenv("MAILPIT_SMTP_PORT")
+	if port == "" {
+		port = "1025"
+	}
+	from := os.Getenv("MAILPIT_SENDER_EMAIL")
+	if from == "" {
+		from = "no-reply@yappingsaham.test"
+	}
+	message := "From: Yapping Saham <" + from + ">\r\n" +
+		"To: " + recipient + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"MIME-Version: 1.0\r\n" +
+		"Content-Type: text/html; charset=UTF-8\r\n\r\n" + content
+	address := host + ":" + port
+	var auth smtp.Auth
+	if user := os.Getenv("MAILPIT_SMTP_USER"); user != "" {
+		auth = smtp.PlainAuth("", user, os.Getenv("MAILPIT_SMTP_PASSWORD"), host)
+	}
+	err := smtp.SendMail(address, auth, from, []string{recipient}, []byte(message))
+	status := 250
+	if err != nil {
+		status = 0
+	}
+	LogInterfaceCall("SendMailpitEmail", "smtp://"+address, "mailpit delivery", status, err)
 	return err
 }
