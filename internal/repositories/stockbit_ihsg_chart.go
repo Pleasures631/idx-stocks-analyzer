@@ -5,17 +5,26 @@ import (
 	"indonesia-stocks-api/internal/models"
 )
 
-func UpsertStockbitIHSGChart(points []models.StockbitIHSGChartPoint) error {
+func ReplaceStockbitIHSGDailyClose(points []models.StockbitIHSGChartPoint) error {
 	if len(points) == 0 {
 		return nil
 	}
-	const query = "INSERT INTO t_stockbit_ihsg_chart (symbol, trade_date, `interval`, observed_at, xlabel, value, percentage, change_value, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE xlabel = VALUES(xlabel), value = VALUES(value), percentage = VALUES(percentage), change_value = VALUES(change_value), updated_at = NOW()"
+	tx, err := database.DB.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	const deleteQuery = "DELETE FROM t_stockbit_ihsg_chart WHERE symbol = ? AND `interval` = ? AND trade_date = ?"
+	const insertQuery = "INSERT INTO t_stockbit_ihsg_chart (symbol, trade_date, `interval`, observed_at, xlabel, value, percentage, change_value, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE xlabel = VALUES(xlabel), value = VALUES(value), percentage = VALUES(percentage), change_value = VALUES(change_value), updated_at = NOW()"
 	for _, point := range points {
-		if _, err := database.DB.Exec(query, point.Symbol, point.TradeDate, point.Interval, point.ObservedAt, point.XLabel, point.Value, point.Percentage, point.Change); err != nil {
+		if _, err := tx.Exec(deleteQuery, point.Symbol, point.Interval, point.TradeDate); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(insertQuery, point.Symbol, point.TradeDate, point.Interval, point.ObservedAt, point.XLabel, point.Value, point.Percentage, point.Change); err != nil {
 			return err
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 func GetStockbitIHSGChart(symbol, from, to string) ([]models.StockbitIHSGChartPoint, error) {

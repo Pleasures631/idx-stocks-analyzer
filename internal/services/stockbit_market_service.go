@@ -180,8 +180,20 @@ func SyncStockbitIHSGChart(ctx context.Context, symbol, from, to string) (int, e
 	if err != nil {
 		return 0, err
 	}
-	if err := repositories.UpsertStockbitIHSGChart(points); err != nil {
+	latestByDate := make(map[string]models.StockbitIHSGChartPoint)
+	for _, point := range points {
+		key := point.TradeDate.Format("2006-01-02")
+		current, exists := latestByDate[key]
+		if !exists || point.ObservedAt.After(current.ObservedAt) {
+			latestByDate[key] = point
+		}
+	}
+	dailyClose := make([]models.StockbitIHSGChartPoint, 0, len(latestByDate))
+	for _, point := range latestByDate {
+		dailyClose = append(dailyClose, point)
+	}
+	if err := repositories.ReplaceStockbitIHSGDailyClose(dailyClose); err != nil {
 		return 0, err
 	}
-	return len(points), nil
+	return len(dailyClose), nil
 }
