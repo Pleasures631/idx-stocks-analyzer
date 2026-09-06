@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -403,6 +404,15 @@ func (b *TelegramBot) handleFetchDaily(chatID int64) {
 	}
 
 	// 7. Update last sync date ke database
+	b.sendMessage(chatID, "🔄 Sync IHSG Foreign/Domestic...", nil)
+	if _, err := services.SyncStockbitForeignDomestic(context.Background(), "IHSG"); err != nil {
+		log.Printf("[fetchDaily] Gagal sync IHSG foreign/domestic: %v", err)
+		b.sendMessage(chatID, fmt.Sprintf("⚠️ Gagal sync IHSG Foreign/Domestic: %s", err.Error()), nil)
+	} else {
+		b.sendMessage(chatID, "✅ IHSG Foreign/Domestic synced", nil)
+	}
+
+	// 8. Update last sync date ke database
 	if err := repositories.UpdateLastSyncDate("daily_sync", today); err != nil {
 		log.Printf("[fetchDaily] Gagal update last sync date: %v", err)
 	}
