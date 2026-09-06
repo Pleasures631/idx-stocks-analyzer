@@ -37,6 +37,8 @@ func RegisterRoutes(r *gin.Engine) {
 
 	r.GET("/health", handlers.HealthCheck)
 	r.POST("/users/register", handlers.RegisterUser)
+	r.GET("/education/articles", handlers.GetEducationArticles)
+	r.GET("/education/articles/:slug", handlers.GetEducationArticle)
 	r.GET("/stocks/list", handlers.GetStocksList)
 	r.GET("/brokers/list", handlers.GetBrokersList)
 	r.GET("/idx/brokersummary", handlers.FetchBrokerSummary)
