@@ -110,23 +110,26 @@ type ExodusFlowPhase struct {
 	LocalMidNet      float64 `json:"local_mid_net"`
 
 	// Metrics
-	SmartMoneyRatio   float64 `json:"smart_money_ratio"`   // (Foreign+Inst) / Total
-	RetailDominance   float64 `json:"retail_dominance"`    // Retail / Total (if net positive)
-	Top1Concentration float64 `json:"top1_concentration"`  // Top1 / Top3 net value
-	ForeignLeadership bool    `json:"foreign_leadership"`  // Top1 is FOREIGN group
+	SmartMoneyRatio   float64 `json:"smart_money_ratio"`  // (Foreign+Inst) / Total
+	RetailDominance   float64 `json:"retail_dominance"`   // Retail / Total (if net positive)
+	Top1Concentration float64 `json:"top1_concentration"` // Top1 / Top3 net value
+	ForeignLeadership bool    `json:"foreign_leadership"` // Top1 is FOREIGN group
+	BuyHHI            float64 `json:"buy_hhi"`            // HHI of broker buy-value shares, 0-10000
+	SellHHI           float64 `json:"sell_hhi"`           // HHI of broker sell-value shares, 0-10000
+	TotalHHI          float64 `json:"total_hhi"`          // HHI of broker buy+sell-value shares, 0-10000
 
 	// --- New Improvement Metrics ---
-	SmartMoneyActiveDays int     `json:"smart_money_active_days"` // hari asing+inst net buy
+	SmartMoneyActiveDays  int     `json:"smart_money_active_days"` // hari asing+inst net buy
 	SmartMoneyConsistency float64 `json:"smart_money_consistency"` // active/active_days_in_window (%)
 	SmartMoneyMomentum    float64 `json:"smart_money_momentum"`    // second half net first-half net (Rp)
 	FirstHalfDate         string  `json:"first_half_date"`
 	SecondHalfDate        string  `json:"second_half_date"`
 	FirstHalfNet          float64 `json:"first_half_net"`
 	SecondHalfNet         float64 `json:"second_half_net"`
-	MomentumAccelerating  bool    `json:"momentum_accelerating"`   // buying makin besar di akhir
-	PriceChangePct        float64 `json:"price_change_pct"`        // % perubahan harga selama window
-	PriceConfirms         bool    `json:"price_confirms"`          // smart money net & harga searah
-	VolumeSpikeRatio      float64 `json:"volume_spike_ratio"`      // avg vol window / avg vol baseline
+	MomentumAccelerating  bool    `json:"momentum_accelerating"` // buying makin besar di akhir
+	PriceChangePct        float64 `json:"price_change_pct"`      // % perubahan harga selama window
+	PriceConfirms         bool    `json:"price_confirms"`        // smart money net & harga searah
+	VolumeSpikeRatio      float64 `json:"volume_spike_ratio"`    // avg vol window / avg vol baseline
 	HasVolumeSpike        bool    `json:"has_volume_spike"`
 
 	// Anomaly (per-hari, broker yang tiba-tiba beli/jual sangat besar)

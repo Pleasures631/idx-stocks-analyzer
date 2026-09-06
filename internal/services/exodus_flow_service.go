@@ -119,6 +119,9 @@ func AnalyzeExodusBrokerFlowService(symbol, fromStr, toStr string) (*models.Exod
 	result.FormattedSellValue = helpers.FormatBigNumber(result.TotalSellValue)
 	result.FormattedNetValue = helpers.FormatBigNumber(result.NetValue)
 	result.FormattedForeignNet = helpers.FormatBigNumber(result.ForeignNetValue)
+	result.BuyHHI = calculateHHI(flows, func(f models.ExodusBrokerFlow) float64 { return f.BuyValue })
+	result.SellHHI = calculateHHI(flows, func(f models.ExodusBrokerFlow) float64 { return f.SellValue })
+	result.TotalHHI = calculateHHI(flows, func(f models.ExodusBrokerFlow) float64 { return f.BuyValue + f.SellValue })
 
 	// Compute metrics
 	totalAbsValue := result.TotalBuyValue + result.TotalSellValue
@@ -154,6 +157,33 @@ func AnalyzeExodusBrokerFlowService(symbol, fromStr, toStr string) (*models.Exod
 		result.Phase, result.FormattedNetValue, result.FormattedForeignNet, helpers.FormatBigNumber(result.RetailNet))
 
 	return result, nil
+}
+
+// calculateHHI returns the Herfindahl-Hirschman Index of broker value shares.
+// The result uses the conventional 0-10,000 scale: a broker with 100% share
+// yields 10,000, while a broader distribution yields a lower score.
+func calculateHHI(flows []models.ExodusBrokerFlow, valueFn func(models.ExodusBrokerFlow) float64) float64 {
+	total := 0.0
+	for _, flow := range flows {
+		value := valueFn(flow)
+		if value > 0 {
+			total += value
+		}
+	}
+	if total == 0 {
+		return 0
+	}
+
+	hhi := 0.0
+	for _, flow := range flows {
+		value := valueFn(flow)
+		if value <= 0 {
+			continue
+		}
+		sharePct := value / total * 100
+		hhi += sharePct * sharePct
+	}
+	return math.Round(hhi*100) / 100
 }
 
 // determinePhaseEnhanced uses broker group breakdown + metrics to detect
