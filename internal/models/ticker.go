@@ -13,22 +13,6 @@ type TickerPriceBar struct {
 
 // TickerBrokerVolume merepresentasikan agregat trading per broker dalam rentang.
 type TickerBrokerVolume struct {
-	BrokerCode  string  `db:"broker_code" json:"broker_code"`
-	BrokerName  string  `db:"broker_name" json:"broker_name"`
-	BrokerType  string  `db:"broker_type" json:"broker_type"`
-	BuyLot      float64 `db:"buy_lot" json:"buy_lot"`
-	SellLot     float64 `db:"sell_lot" json:"sell_lot"`
-	BuyVolume   float64 `db:"buy_volume" json:"buy_volume"`
-	SellVolume  float64 `db:"sell_volume" json:"sell_volume"`
-	BuyValue    float64 `db:"buy_value" json:"buy_value"`
-	SellValue   float64 `db:"sell_value" json:"sell_value"`
-	NetValue    float64 `db:"net_value" json:"net_value"`
-	ActiveDays  int     `db:"active_days" json:"active_days"`
-}
-
-// TickerBrokerSummary merepresentasikan buy/sell per broker pada 1 hari.
-type TickerBrokerSummary struct {
-	TradeDate string  `db:"trade_date" json:"trade_date"`
 	BrokerCode string  `db:"broker_code" json:"broker_code"`
 	BrokerName string  `db:"broker_name" json:"broker_name"`
 	BrokerType string  `db:"broker_type" json:"broker_type"`
@@ -39,7 +23,24 @@ type TickerBrokerSummary struct {
 	BuyValue   float64 `db:"buy_value" json:"buy_value"`
 	SellValue  float64 `db:"sell_value" json:"sell_value"`
 	NetValue   float64 `db:"net_value" json:"net_value"`
-	Frequency  int64   `db:"frequency" json:"frequency"`
+	ActiveDays int     `db:"active_days" json:"active_days"`
+}
+
+// TickerBrokerSummary merepresentasikan buy/sell per broker pada 1 hari.
+type TickerBrokerSummary struct {
+	TradeDate   string  `db:"trade_date" json:"trade_date"`
+	BrokerCode  string  `db:"broker_code" json:"broker_code"`
+	BrokerName  string  `db:"broker_name" json:"broker_name"`
+	BrokerType  string  `db:"broker_type" json:"broker_type"`
+	BrokerGroup string  `db:"broker_group" json:"broker_group"`
+	BuyLot      float64 `db:"buy_lot" json:"buy_lot"`
+	SellLot     float64 `db:"sell_lot" json:"sell_lot"`
+	BuyVolume   float64 `db:"buy_volume" json:"buy_volume"`
+	SellVolume  float64 `db:"sell_volume" json:"sell_volume"`
+	BuyValue    float64 `db:"buy_value" json:"buy_value"`
+	SellValue   float64 `db:"sell_value" json:"sell_value"`
+	NetValue    float64 `db:"net_value" json:"net_value"`
+	Frequency   int64   `db:"frequency" json:"frequency"`
 }
 
 // TickerDetailResponse adalah payload lengkap untuk halaman detail sebuah saham.

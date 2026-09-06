@@ -478,6 +478,7 @@ func GetTickerBrokerSummary(symbol, from, to string) ([]models.TickerBrokerSumma
 		s.broker_code,
 		COALESCE(b.broker_name, s.broker_code) AS broker_name,
 		MAX(s.broker_type) AS broker_type,
+		COALESCE(MAX(b.broker_group), 'UNKNOWN') AS broker_group,
 		SUM(IF(s.side = 'BUY',  s.lot, 0))  AS buy_lot,
 		SUM(IF(s.side = 'SELL', s.lot, 0))  AS sell_lot,
 		SUM(IF(s.side = 'BUY',  s.volume, 0)) AS buy_volume,
