@@ -38,6 +38,18 @@ var stockbitIHSGCache struct {
 	fetchedAt time.Time
 }
 
+var stockbitChartRequestMu sync.Mutex
+var stockbitChartLastRequest time.Time
+
+func waitForStockbitChartRequest() {
+	stockbitChartRequestMu.Lock()
+	defer stockbitChartRequestMu.Unlock()
+	if wait := 250*time.Millisecond - time.Since(stockbitChartLastRequest); wait > 0 {
+		time.Sleep(wait)
+	}
+	stockbitChartLastRequest = time.Now()
+}
+
 func CrawlStockbitIHSG(ctx context.Context) (models.StockbitIHSGQuote, error) {
 	script := strings.TrimSpace(os.Getenv("STOCKBIT_IHSG_CRAWLER_SCRIPT"))
 	if script == "" {
@@ -176,24 +188,56 @@ func FetchStockbitIHSGChart(ctx context.Context, symbol, from, to string) ([]mod
 }
 
 func SyncStockbitIHSGChart(ctx context.Context, symbol, from, to string) (int, error) {
-	points, err := FetchStockbitIHSGChart(ctx, symbol, from, to)
+	result, err := SyncStockbitIHSGChartRange(ctx, symbol, from, to)
 	if err != nil {
 		return 0, err
 	}
-	latestByDate := make(map[string]models.StockbitIHSGChartPoint)
-	for _, point := range points {
-		key := point.TradeDate.Format("2006-01-02")
-		current, exists := latestByDate[key]
-		if !exists || point.ObservedAt.After(current.ObservedAt) {
-			latestByDate[key] = point
-		}
+	return result.StoredDays, nil
+}
+
+func SyncStockbitIHSGChartRange(ctx context.Context, symbol, from, to string) (models.StockbitIHSGChartSyncResult, error) {
+	result := models.StockbitIHSGChartSyncResult{SkippedDays: []string{}, FailedDays: []string{}}
+	location, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		return result, err
 	}
-	dailyClose := make([]models.StockbitIHSGChartPoint, 0, len(latestByDate))
-	for _, point := range latestByDate {
-		dailyClose = append(dailyClose, point)
+	start, err := time.ParseInLocation("2006-01-02", from, location)
+	if err != nil {
+		return result, fmt.Errorf("invalid from date: %w", err)
+	}
+	end, err := time.ParseInLocation("2006-01-02", to, location)
+	if err != nil {
+		return result, fmt.Errorf("invalid to date: %w", err)
+	}
+	if start.After(end) {
+		return result, fmt.Errorf("from cannot be after to")
+	}
+	result.RequestedDays = int(end.Sub(start).Hours()/24) + 1
+	dailyClose := make([]models.StockbitIHSGChartPoint, 0, result.RequestedDays)
+	for date := start; !date.After(end); date = date.AddDate(0, 0, 1) {
+		dateString := date.Format("2006-01-02")
+		waitForStockbitChartRequest()
+		points, fetchErr := FetchStockbitIHSGChart(ctx, symbol, dateString, dateString)
+		if fetchErr != nil {
+			result.FailedDays = append(result.FailedDays, dateString)
+			continue
+		}
+		if len(points) == 0 {
+			result.SkippedDays = append(result.SkippedDays, dateString)
+			continue
+		}
+		latest := points[0]
+		for _, point := range points[1:] {
+			if point.ObservedAt.After(latest.ObservedAt) {
+				latest = point
+			}
+		}
+		dailyClose = append(dailyClose, latest)
+		result.TradingDays++
 	}
 	if err := repositories.ReplaceStockbitIHSGDailyClose(dailyClose); err != nil {
-		return 0, err
+		return result, err
 	}
-	return len(dailyClose), nil
+	result.StoredDays = len(dailyClose)
+	return result, nil
 }
