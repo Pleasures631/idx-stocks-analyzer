@@ -29,3 +29,20 @@ CREATE TABLE IF NOT EXISTS m_password_reset_tokens (
   KEY ix_m_password_reset_tokens_user (user_id),
   CONSTRAINT fk_m_password_reset_tokens_user FOREIGN KEY (user_id) REFERENCES m_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS m_pending_registrations (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(120) NOT NULL,
+  phone VARCHAR(16) NOT NULL,
+  email VARCHAR(254) NOT NULL,
+  address VARCHAR(500) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  otp_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_m_pending_registrations_email (email),
+  UNIQUE KEY uq_m_pending_registrations_phone (phone),
+  KEY ix_m_pending_registrations_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -5,11 +5,14 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
+	"math/big"
 	"net/http"
 	"os"
 	"strings"
@@ -25,6 +28,20 @@ const passwordCost = 12
 func HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), passwordCost)
 	return string(hash), err
+}
+
+func GenerateOTP() (string, error) {
+	value, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%06d", value.Int64()), nil
+}
+
+func HashOTP(otp string) string { return tokenHash(otp) }
+
+func VerifyOTP(expectedHash, otp string) bool {
+	return subtle.ConstantTimeCompare([]byte(expectedHash), []byte(HashOTP(otp))) == 1
 }
 
 func Authenticate(email, password string) (*models.AuthResponse, error) {
@@ -100,6 +117,11 @@ func ResetPassword(token, password string) (*models.User, error) {
 	return repositories.ResetPassword(tokenHash(token), string(hash))
 }
 
+func SendRegistrationOTP(email, name, otp string) error {
+	content := fmt.Sprintf("<h1 style=\"margin:0 0 16px;color:#111827;font-size:24px\">Verify your email</h1><p style=\"color:#4b5563\">Enter this code to complete your StockDash registration:</p><div style=\"margin:24px 0;padding:16px;text-align:center;background:#eef2ff;border-radius:12px;color:#4338ca;font-size:32px;font-weight:700;letter-spacing:8px\">%s</div><p style=\"color:#6b7280;font-size:13px\">This code expires in 10 minutes.</p>", html.EscapeString(otp))
+	return sendBrevoEmail(email, name, "Verify your StockDash account", content)
+}
+
 func randomToken(size int) (string, error) {
 	b := make([]byte, size)
 	if _, err := rand.Read(b); err != nil {
@@ -114,20 +136,25 @@ func tokenHash(token string) string {
 }
 
 func sendResetEmail(email, name, token string) error {
+	baseURL := strings.TrimRight(os.Getenv("FRONTEND_BASE_URL"), "/")
+	if baseURL == "" {
+		baseURL = "http://localhost:3000"
+	}
+	content := fmt.Sprintf("<h1 style=\"margin:0 0 16px;color:#111827;font-size:24px\">Reset your password</h1><p style=\"color:#4b5563\">Hi %s, use the button below to choose a new password.</p><p style=\"margin:24px 0\"><a href=\"%s/reset-password?token=%s\" style=\"display:inline-block;padding:12px 18px;border-radius:10px;background:#4f46e5;color:#fff;text-decoration:none;font-weight:600\">Reset password</a></p><p style=\"color:#6b7280;font-size:13px\">This link expires in 30 minutes. If you did not request it, you can ignore this email.</p>", html.EscapeString(name), html.EscapeString(baseURL), html.EscapeString(token))
+	return sendBrevoEmail(email, name, "Reset your StockDash password", content)
+}
+
+func sendBrevoEmail(email, name, subject, content string) error {
 	apiKey := os.Getenv("BREVO_API_KEY")
 	senderEmail := os.Getenv("BREVO_SENDER_EMAIL")
 	if apiKey == "" || senderEmail == "" {
 		return errors.New("Brevo email configuration is missing")
 	}
-	baseURL := strings.TrimRight(os.Getenv("FRONTEND_BASE_URL"), "/")
-	if baseURL == "" {
-		baseURL = "http://localhost:3000"
-	}
 	payload := map[string]any{
 		"sender":      map[string]string{"name": os.Getenv("BREVO_SENDER_NAME"), "email": senderEmail},
 		"to":          []map[string]string{{"email": email, "name": name}},
-		"subject":     "Reset your StockDash password",
-		"htmlContent": fmt.Sprintf("<p>Use this link to reset your password:</p><p><a href=\"%s/reset-password?token=%s\">Reset password</a></p><p>This link expires in 30 minutes.</p>", baseURL, token),
+		"subject":     subject,
+		"htmlContent": fmt.Sprintf("<div style=\"background:#f3f4f6;padding:32px 16px;font-family:Arial,sans-serif\"><div style=\"max-width:520px;margin:auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 18px rgba(15,23,42,.08)\"><div style=\"color:#4f46e5;font-size:18px;font-weight:700;margin-bottom:24px\">StockDash</div>%s</div></div>", content),
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -152,6 +179,6 @@ func sendResetEmail(email, name, token string) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		err = fmt.Errorf("Brevo returned HTTP %d", resp.StatusCode)
 	}
-	LogInterfaceCall("SendPasswordResetEmail", req.URL.String(), responseBody.String(), resp.StatusCode, err)
+	LogInterfaceCall("SendBrevoEmail", req.URL.String(), responseBody.String(), resp.StatusCode, err)
 	return err
 }

@@ -10,6 +10,23 @@ type RegisterUserRequest struct {
 	Password string `json:"password"`
 }
 
+type VerifyRegistrationRequest struct {
+	Email string `json:"email"`
+	OTP   string `json:"otp"`
+}
+
+type PendingRegistration struct {
+	ID           uint64    `db:"id"`
+	Name         string    `db:"name"`
+	Phone        string    `db:"phone"`
+	Email        string    `db:"email"`
+	Address      string    `db:"address"`
+	PasswordHash string    `db:"password_hash"`
+	OTPHash      string    `db:"otp_hash"`
+	ExpiresAt    time.Time `db:"expires_at"`
+	Attempts     int       `db:"attempts"`
+}
+
 type User struct {
 	ID        uint64    `db:"id" json:"id"`
 	Name      string    `db:"name" json:"name"`

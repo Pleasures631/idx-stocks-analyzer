@@ -36,6 +36,46 @@ func CreateUser(user models.RegisterUserRequest) (*models.User, error) {
 	return &created, nil
 }
 
+func UserAlreadyRegistered(email, phone string) (bool, error) {
+	var count int
+	err := database.DB.Get(&count, `SELECT COUNT(*) FROM m_users WHERE email = ? OR phone = ?`, email, phone)
+	return count > 0, err
+}
+
+func CreatePendingRegistration(user models.RegisterUserRequest, otpHash string, expiresAt time.Time) error {
+	tx, err := database.DB.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM m_pending_registrations WHERE email = ? OR phone = ?`, user.Email, user.Phone); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`INSERT INTO m_pending_registrations (name, phone, email, address, password_hash, otp_hash, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)`, user.Name, user.Phone, user.Email, user.Address, user.Password, otpHash, expiresAt); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func FindPendingRegistration(email string) (*models.PendingRegistration, error) {
+	var pending models.PendingRegistration
+	err := database.DB.Get(&pending, `SELECT id, name, phone, email, address, password_hash, otp_hash, expires_at, attempts FROM m_pending_registrations WHERE email = ? LIMIT 1`, email)
+	if err != nil {
+		return nil, err
+	}
+	return &pending, nil
+}
+
+func IncrementPendingRegistrationAttempts(id uint64) error {
+	_, err := database.DB.Exec(`UPDATE m_pending_registrations SET attempts = attempts + 1 WHERE id = ?`, id)
+	return err
+}
+
+func DeletePendingRegistration(id uint64) error {
+	_, err := database.DB.Exec(`DELETE FROM m_pending_registrations WHERE id = ?`, id)
+	return err
+}
+
 func FindUserByEmail(email string) (*models.User, string, error) {
 	var row struct {
 		models.User
